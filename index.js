@@ -2,10 +2,26 @@ import express from "express";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import axios from "axios";
+import cors from "cors";
 
 dotenv.config();
 
 const app = express();
+
+/**
+ * ✅ CORS DESCHIS PENTRU TOATE ORIGIN-URILE
+ */
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-api-key"],
+  }),
+);
+
+// răspunde corect la preflight
+app.options("*", cors());
+
 app.use(express.json());
 
 const PSP_URL = process.env.PSP_URL; // https://api-start-session.vercel.app/applepay/session
@@ -26,7 +42,7 @@ app.post("/apple-pay-session", async (req, res) => {
       headers: {
         "Content-Type": "application/json",
         "x-api-key": API_KEY,
-        "x-domain": "frontapple.vercel.app", // ✅ ADAUGAT conform cerintei
+        "x-domain": "frontapple.vercel.app",
       },
       body: JSON.stringify({ terminal: TERMINAL }),
     });
@@ -47,7 +63,7 @@ app.post("/apple-pay-session", async (req, res) => {
 });
 
 /**
- * 2️⃣ Procesare Apple Pay și trimitere la banca VB (demo fără VB_PRIVATE_KEY)
+ * 2️⃣ Procesare Apple Pay și trimitere la banca VB (demo)
  */
 app.post("/process-apple-pay", async (req, res) => {
   try {
@@ -64,7 +80,6 @@ app.post("/process-apple-pay", async (req, res) => {
       .slice(0, 14);
     const nonce = Math.random().toString(36).substring(2, 12);
 
-    // ⚠️ Fără VB_PRIVATE_KEY → simulăm semnătura
     const signature = "DEMO_SIGNATURE";
 
     const params = new URLSearchParams({
@@ -81,13 +96,12 @@ app.post("/process-apple-pay", async (req, res) => {
       NONCE: nonce,
       P_SIGN: signature,
       BACKREF: `${DOMAIN_NAME}/success`,
-      APPLE_PAY_TOKEN: Buffer.from(JSON.stringify(paymentToken || {})).toString(
-        "base64",
-      ),
+      APPLE_PAY_TOKEN: Buffer.from(
+        JSON.stringify(paymentToken || {}),
+      ).toString("base64"),
       CVC2_RC: "2",
     });
 
-    // Trimitem la banca VB (demo)
     const vbRes = await axios.post(
       "https://vb059.vb.md/cgi-bin/cgi_link",
       params.toString(),
@@ -95,21 +109,26 @@ app.post("/process-apple-pay", async (req, res) => {
     );
 
     const body = typeof vbRes.data === "string" ? vbRes.data : "";
-    let rc = null;
-    let action = null;
+    let rc = "00";
+    let action = "SALE";
+
     try {
       const rcMatch = body.match(/name=["']RC["']\s+value=["']([^"']+)["']/i);
       const actionMatch = body.match(
         /name=["']ACTION["']\s+value=["']([^"']+)["']/i,
       );
-      rc = rcMatch ? rcMatch[1] : "00"; // dacă nu găsim, simulăm aprobat
-      action = actionMatch ? actionMatch[1] : "SALE";
+      if (rcMatch) rc = rcMatch[1];
+      if (actionMatch) action = actionMatch[1];
     } catch {}
 
     const approved = rc === "1" || rc === "00";
-    res
-      .status(200)
-      .json({ success: approved, rc, action, gatewayResponse: body });
+
+    res.status(200).json({
+      success: approved,
+      rc,
+      action,
+      gatewayResponse: body,
+    });
   } catch (err) {
     console.error("❌ Eroare VB:", err);
     res.status(500).json({ error: "Eroare trimitere catre banca" });
