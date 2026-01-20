@@ -12,7 +12,7 @@ const app = express();
  * ✅ CORS FULL (permite orice domeniu)
  */
 app.use(cors({
-  origin: "https://frontapple.vercel.app/",
+  origin: "https://frontapple.vercel.app",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Content-Type",
