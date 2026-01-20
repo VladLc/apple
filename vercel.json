@@ -9,9 +9,9 @@
       "src": "/.well-known/apple-developer-merchantid-domain-association",
       "dest": "/public/.well-known/apple-developer-merchantid-domain-association"
     },
-    { "src": "/apple-pay-session", "methods": ["POST"], "dest": "/index.js" },
-    { "src": "/process-apple-pay", "methods": ["POST"], "dest": "/index.js" },
-    { "src": "/process-card", "methods": ["POST"], "dest": "/index.js" },
+    { "src": "/apple-pay-session", "dest": "/index.js" },
+    { "src": "/process-apple-pay", "dest": "/index.js" },
+    { "src": "/process-card", "dest": "/index.js" },
     { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }
