@@ -12,7 +12,7 @@ const PSP_URL = process.env.PSP_URL; // https://api-start-session.vercel.app/app
 const API_KEY = process.env.UNIVERSAL_API_KEY;
 const TERMINAL = process.env.VB_TERMINAL;
 const PORT = process.env.PORT || 3000;
-const DOMAIN_NAME = "https://applepay-black.vercel.app";
+const DOMAIN_NAME = "https://apple-eta-lime.vercel.app/";
 
 /**
  * 1️⃣ Start Session Apple Pay
@@ -26,7 +26,7 @@ app.post("/apple-pay-session", async (req, res) => {
       headers: {
         "Content-Type": "application/json",
         "x-api-key": API_KEY,
-        "x-domain": "applepay-black.vercel.app", // ✅ ADAUGAT conform cerintei
+        "x-domain": "apple-eta-lime.vercel.app/", // ✅ ADAUGAT conform cerintei
       },
       body: JSON.stringify({ terminal: TERMINAL }),
     });
