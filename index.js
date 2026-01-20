@@ -47,7 +47,7 @@ app.post("/apple-pay-session", async (req, res) => {
       headers: {
         "Content-Type": "application/json",
         "x-api-key": API_KEY,
-        "x-domain": "www.foisoare.md"
+        "x-domain": "frontapple.vercel.app"
       },
       body: JSON.stringify({
         terminal: TERMINAL,
