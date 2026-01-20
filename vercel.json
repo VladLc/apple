@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "index.js", "use": "@vercel/node" },
+    { "src": "public/**/*", "use": "@vercel/static" }
+  ],
+  "routes": [
+    {
+      "src": "/.well-known/apple-developer-merchantid-domain-association",
+      "dest": "/public/.well-known/apple-developer-merchantid-domain-association"
+    },
+    { "src": "/apple-pay-session", "methods": ["POST"], "dest": "/index.js" },
+    { "src": "/process-apple-pay", "methods": ["POST"], "dest": "/index.js" },
+    { "src": "/process-card", "methods": ["POST"], "dest": "/index.js" },
+    { "src": "/(.*)", "dest": "/public/$1" }
+  ]
+}

@@ -1,0 +1,184 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Apple Pay Demo</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 24px;
+      }
+      .apple-pay-button {
+        -webkit-appearance: -apple-pay-button;
+        appearance: -apple-pay-button;
+        width: 240px;
+        height: 44px;
+      }
+      .hidden {
+        display: none;
+      }
+      form {
+        margin-top: 16px;
+        max-width: 400px;
+      }
+      label {
+        display: block;
+        margin-top: 8px;
+      }
+      input {
+        width: 100%;
+        padding: 8px;
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Plata cu Apple Pay (demo)</h2>
+
+    <div id="applePayContainer">
+      <button id="applePayButton" class="apple-pay-button hidden"></button>
+    </div>
+
+    <h3>Plata cu card (fallback)</h3>
+    <form id="cardForm">
+      <label
+        >Numar card
+        <input name="number" required placeholder="4111111111111111" />
+      </label>
+      <label
+        >Exp luna
+        <input name="expMonth" required placeholder="12" />
+      </label>
+      <label
+        >Exp an
+        <input name="expYear" required placeholder="2028" />
+      </label>
+      <label
+        >CVC
+        <input name="cvc" required placeholder="123" />
+      </label>
+      <label
+        >Suma
+        <input name="amount" required placeholder="1.00" />
+      </label>
+      <button type="submit">Plateste cu card</button>
+    </form>
+
+    <script>
+      const totalLabel = "Produs demo";
+      const totalAmount = "1.00";
+      const currency = "MDL";
+      const country = "MD";
+
+      // Functie pentru generare order random 6 cifre
+      function generateOrder() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+      }
+
+      // ✅ Apple Pay setup
+      async function setupApplePay() {
+        if (window.ApplePaySession && ApplePaySession.canMakePayments()) {
+          const btn = document.getElementById("applePayButton");
+          btn.classList.remove("hidden");
+
+          btn.addEventListener("click", async () => {
+            const paymentRequest = {
+              countryCode: country,
+              currencyCode: currency,
+              total: { label: totalLabel, amount: totalAmount },
+              supportedNetworks: ["visa", "masterCard", "amex"],
+              merchantCapabilities: ["supports3DS"],
+            };
+
+            const session = new ApplePaySession(3, paymentRequest);
+
+            session.onvalidatemerchant = async (event) => {
+              try {
+                const resp = await fetch("/apple-pay-session", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ validationURL: event.validationURL }),
+                });
+                const merchantSession = await resp.json();
+                session.completeMerchantValidation(merchantSession);
+              } catch (err) {
+                console.error("Eroare validare merchant:", err);
+                session.abort();
+              }
+            };
+
+            session.onpaymentauthorized = async (event) => {
+              const order = generateOrder();
+              const paymentData = {
+                amount: totalAmount,
+                order: order,
+                paymentToken: event.payment.token,
+              };
+
+              try {
+                const resp = await fetch("/process-apple-pay", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(paymentData),
+                });
+                const result = await resp.json();
+
+                if (result && result.success) {
+                  session.completePayment(ApplePaySession.STATUS_SUCCESS);
+                  alert("Plata Apple Pay procesata cu succes. Order: " + order);
+                } else {
+                  session.completePayment(ApplePaySession.STATUS_FAILURE);
+                  alert("Eroare la procesare Apple Pay.");
+                }
+              } catch (err) {
+                console.error("Eroare la procesarea Apple Pay:", err);
+                session.completePayment(ApplePaySession.STATUS_FAILURE);
+              }
+            };
+
+            session.begin();
+          });
+        } else {
+          console.log("Apple Pay nu este disponibil pe acest browser/device.");
+        }
+      }
+
+      // ✅ Initializare Apple Pay
+      setupApplePay();
+
+      // ✅ Fallback card
+      document
+        .getElementById("cardForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const form = e.target;
+          const data = {
+            number: form.number.value,
+            expMonth: form.expMonth.value,
+            expYear: form.expYear.value,
+            cvc: form.cvc.value,
+            amount: form.amount.value,
+            currency,
+            order: generateOrder(),
+          };
+
+          try {
+            const resp = await fetch("/process-apple-pay", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                amount: data.amount,
+                order: data.order,
+                paymentToken: { card: data }, // simulare token card
+              }),
+            });
+            const j = await resp.json();
+            alert("Raspuns server: " + JSON.stringify(j));
+          } catch (err) {
+            console.error("Eroare la trimitere card fallback:", err);
+            alert("Eroare la trimitere card.");
+          }
+        });
+    </script>
+  </body>
+</html>
